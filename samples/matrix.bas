@@ -1,0 +1,43 @@
+10 REM *** Matrix Digital Rain ***
+20 SCREEN 9: CLS
+30 NUMCOLS = 40
+40 DIM COLY(40), COLSPD(40), COLLEN(40)
+50 RANDOMIZE TIMER
+60 REM Initialize columns
+70 FOR I = 1 TO NUMCOLS
+80   COLY(I) = -INT(RND * 25)
+90   COLSPD(I) = 1 + INT(RND * 2)
+100  COLLEN(I) = 5 + INT(RND * 15)
+110 NEXT I
+120 REM Define characters
+130 CHARS$ = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*+=<>?"
+140 REM Main loop
+150 K$ = INKEY$: IF K$ <> "" THEN 400
+160 FOR I = 1 TO NUMCOLS
+170   COL = I * 2
+180   REM Draw trail
+190   FOR J = 0 TO COLLEN(I)
+200     ROW = COLY(I) - J
+210     IF ROW < 1 OR ROW > 25 THEN 280
+220     REM Pick random character
+230     CH$ = MID$(CHARS$, INT(RND * LEN(CHARS$)) + 1, 1)
+240     REM Color: bright head, fading tail
+250     C = 2: IF J < 3 THEN C = 10: IF J = 0 THEN C = 15
+260     LOCATE ROW, COL: COLOR C, 0
+270     PRINT CH$;
+280   NEXT J
+290   REM Erase tail end
+300   TAILROW = COLY(I) - COLLEN(I) - 1
+310   IF TAILROW < 1 OR TAILROW > 25 THEN 340
+320   LOCATE TAILROW, COL
+330   PRINT " ";
+340   REM Move column down
+350   COLY(I) = COLY(I) + COLSPD(I)
+360   REM Reset when off screen
+370   IF COLY(I) - COLLEN(I) <= 26 THEN 390
+375   COLY(I) = -INT(RND * 10)
+380   COLSPD(I) = 1 + INT(RND * 2): COLLEN(I) = 5 + INT(RND * 15)
+390 NEXT I
+395 FOR D = 1 TO 3000: NEXT D
+397 GOTO 150
+400 COLOR 7, 0: SCREEN 0: END

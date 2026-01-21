@@ -1,0 +1,431 @@
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Consolas', 'Courier New', monospace;
+    background-color: #1a1a2e;
+    color: #aaaaaa;
+    overflow: hidden;
+}
+
+#app {
+    height: 100%;
+}
+
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #55ff55;
+}
+
+/* Main app container - two column layout */
+.app-container {
+    display: flex;
+    height: 100%;
+    gap: 2px;
+    background-color: #333366;
+}
+
+/* Left panel - Main Console */
+.console-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #000000;
+    min-width: 640px;
+}
+
+.console-header {
+    background-color: #0000aa;
+    color: #ffffff;
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: bold;
+    border-bottom: 2px solid #5555ff;
+}
+
+.console-title {
+    color: #ffff55;
+}
+
+.console-status {
+    color: #55ff55;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+/* Console display area - canvas only */
+.console-display {
+    flex: 1;
+    background-color: #000000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: hidden;
+    outline: none;
+    padding: 4px;
+    min-height: 0; /* Important for flex to shrink properly */
+}
+
+.console-display:focus {
+    outline: 1px solid #5555ff;
+}
+
+/* Graphics canvas - unified text and graphics, no stretching */
+.graphics-canvas {
+    display: block;
+    background-color: #000000;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Command input line */
+.command-line {
+    display: flex;
+    align-items: center;
+    background-color: #000000;
+    padding: 4px 8px;
+    border-top: 1px solid #333366;
+}
+
+.prompt {
+    color: #55ff55;
+    font-size: 14px;
+    margin-right: 4px;
+    font-weight: bold;
+}
+
+.command-input {
+    flex: 1;
+    background-color: #000000;
+    color: #55ff55;
+    border: none;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 14px;
+    outline: none;
+    caret-color: #55ff55;
+}
+
+.command-input::placeholder {
+    color: #336633;
+}
+
+/* Console toolbar */
+.console-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    background-color: #333366;
+    border-top: 1px solid #5555ff;
+}
+
+/* Right side panel */
+.side-panel {
+    width: 320px;
+    min-width: 280px;
+    max-width: 400px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #1a1a2e;
+    border-left: 2px solid #5555ff;
+    overflow: hidden;
+}
+
+/* Section headers */
+.section-header {
+    background-color: #333366;
+    color: #aaaaff;
+    padding: 6px 10px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #5555ff;
+}
+
+.line-count {
+    color: #666688;
+    font-size: 11px;
+}
+
+/* Virtual disk section */
+.disk-section {
+    display: flex;
+    flex-direction: column;
+    height: 70%;
+    overflow: hidden;
+}
+
+.file-list {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #0a0a1a;
+    padding: 4px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 2px;
+    font-size: 13px;
+}
+
+.file-item:hover {
+    background-color: #333366;
+}
+
+.file-item.selected {
+    background-color: #0000aa;
+    color: #ffffff;
+}
+
+.file-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    background-color: #0000aa;
+    color: #ffff55;
+    font-size: 10px;
+    font-weight: bold;
+    border-radius: 2px;
+}
+
+.file-name {
+    flex: 1;
+    color: #55ff55;
+}
+
+.file-size {
+    color: #666688;
+    font-size: 11px;
+}
+
+.disk-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    background-color: #1a1a2e;
+    border-top: 1px solid #333366;
+}
+
+/* Upload section */
+.upload-section {
+    border-top: 1px solid #333366;
+    padding-bottom: 8px;
+    height: 10%;
+}
+
+.upload-controls {
+    padding: 8px 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.file-input {
+    display: none;
+}
+
+.btn-upload {
+    display: inline-block;
+    cursor: pointer;
+}
+
+/* Editor section */
+.editor-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid #5555ff;
+    min-height: 200px;
+}
+
+.editor-textarea {
+    flex: 1;
+    background-color: #0a0a1a;
+    color: #55ff55;
+    border: none;
+    padding: 8px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    line-height: 1.4;
+}
+
+.editor-textarea:focus {
+    outline: none;
+    background-color: #0d0d20;
+}
+
+.editor-textarea::placeholder {
+    color: #336633;
+}
+
+/* Buttons */
+.btn {
+    background-color: #0000aa;
+    color: #ffffff;
+    border: 1px solid #5555ff;
+    padding: 4px 12px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+    background-color: #0000dd;
+}
+
+.btn:active:not(:disabled) {
+    background-color: #000077;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-small {
+    padding: 3px 10px;
+    font-size: 11px;
+}
+
+.btn-run {
+    background-color: #00aa00;
+    border-color: #55ff55;
+}
+
+.btn-run:hover:not(:disabled) {
+    background-color: #00cc00;
+}
+
+.btn-stop {
+    background-color: #aa0000;
+    border-color: #ff5555;
+}
+
+.btn-stop:hover:not(:disabled) {
+    background-color: #cc0000;
+}
+
+/* Cursor animation */
+.cursor {
+    animation: blink 1s step-end infinite;
+    color: #55ff55;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* Help section */
+.help-section {
+    border-top: 1px solid #333366;
+    height: 20%;
+    overflow-y: auto;
+}
+
+.help-content {
+    padding: 6px 10px;
+    font-size: 10px;
+    color: #888888;
+    line-height: 1.4;
+}
+
+.file-count {
+    color: #666688;
+    font-size: 11px;
+}
+
+/* Console colors for text output */
+.color-0 { color: #000000; }
+.color-1 { color: #0000aa; }
+.color-2 { color: #00aa00; }
+.color-3 { color: #00aaaa; }
+.color-4 { color: #aa0000; }
+.color-5 { color: #aa00aa; }
+.color-6 { color: #aa5500; }
+.color-7 { color: #aaaaaa; }
+.color-8 { color: #555555; }
+.color-9 { color: #5555ff; }
+.color-10 { color: #55ff55; }
+.color-11 { color: #55ffff; }
+.color-12 { color: #ff5555; }
+.color-13 { color: #ff55ff; }
+.color-14 { color: #ffff55; }
+.color-15 { color: #ffffff; }
+
+/* Error UI */
+#blazor-error-ui {
+    background: #aa0000;
+    color: white;
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: none;
+    z-index: 1000;
+}
+
+#blazor-error-ui .reload {
+    color: #55ff55;
+    margin-left: 10px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a2e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333366;
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5555ff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .console-panel {
+        min-width: 100%;
+        min-height: 400px;
+    }
+
+    .side-panel {
+        width: 100%;
+        max-width: 100%;
+        min-height: 300px;
+    }
+}

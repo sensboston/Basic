@@ -1,0 +1,674 @@
+@page "/"
+@inject IJSRuntime JS
+@inject BlazorConsole Console
+@implements IDisposable
+
+<div class="app-container">
+    <!-- Left panel - Main Console -->
+    <div class="console-panel">
+        <div class="console-header">
+            <span class="console-title">SharpBasic</span>
+            <span class="console-status">@(isRunning ? "Running" : "Ready")</span>
+        </div>
+
+        <!-- Console display area - always canvas -->
+        <div class="console-display" @ref="consoleDisplayRef" tabindex="0"
+             @onkeydown="HandleKeyDown" @onkeydown:preventDefault="shouldPreventDefault"
+             @onfocus="OnConsoleFocus">
+            <canvas id="graphicsCanvas" class="graphics-canvas"></canvas>
+        </div>
+
+        <!-- Bottom toolbar -->
+        <div class="console-toolbar">
+            <button class="btn btn-run" @onclick="@(async () => { await RunProgram(); await FocusConsole(); })" disabled="@isRunning">F5 RUN</button>
+            <button class="btn btn-stop" @onclick="@(async () => { StopProgram(); await FocusConsole(); })" disabled="@(!isRunning)">ESC STOP</button>
+            <button class="btn" @onclick="@(async () => { ListProgram(); await StartNewInputLine(); await FocusConsole(); })">LIST</button>
+            <button class="btn" @onclick="@(async () => { NewProgram(); await StartNewInputLine(); await FocusConsole(); })">NEW</button>
+            <button class="btn" @onclick="@(async () => { await ClearScreen(); await FocusConsole(); })">CLS</button>
+        </div>
+    </div>
+
+    <!-- Right panel - Virtual Disk -->
+    <div class="side-panel">
+        <!-- Virtual Disk section -->
+        <div class="disk-section">
+            <div class="section-header">
+                <span>Virtual Disk A:</span>
+                <span class="file-count">@virtualDiskFiles.Count files</span>
+            </div>
+            <div class="file-list">
+                @foreach (var file in virtualDiskFiles)
+                {
+                    <div class="file-item @(selectedFile == file.Name ? "selected" : "")"
+                         @onclick="() => SelectFile(file.Name)"
+                         @ondblclick="() => LoadAndRun(file.Name)">
+                        <span class="file-icon">B</span>
+                        <span class="file-name">@file.Name</span>
+                        <span class="file-size">@file.Size</span>
+                    </div>
+                }
+            </div>
+            <div class="disk-toolbar">
+                <button class="btn btn-small" @onclick="@(async () => { LoadSelectedFile(); await StartNewInputLine(); await FocusConsole(); })" disabled="@(selectedFile == null)">LOAD</button>
+                <button class="btn btn-small btn-run" @onclick="@(async () => { await RunSelectedFile(); await FocusConsole(); })" disabled="@(selectedFile == null || isRunning)">RUN</button>
+            </div>
+        </div>
+
+        <!-- Local file upload -->
+        <div class="upload-section">
+            <div class="section-header">
+                <span>Load from disk:</span>
+            </div>
+            <div class="upload-controls">
+                <InputFile OnChange="HandleFileUpload" accept=".bas,.BAS,.txt" class="file-input" id="fileInput" />
+                <label for="fileInput" class="btn btn-small btn-upload">Browse...</label>
+            </div>
+        </div>
+
+        <!-- Help section -->
+        <div class="help-section">
+            <div class="section-header">
+                <span>Commands:</span>
+            </div>
+            <div class="help-content">
+                <div>RUN - run program</div>
+                <div>LIST - show program</div>
+                <div>NEW - clear program</div>
+                <div>CLS - clear screen</div>
+                <div>LOAD "file" - load program</div>
+                <div>FILES - list files</div>
+                <div>ESC - stop program</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string programCode = "";
+    private string currentInput = "";
+    private string? selectedFile = null;
+    private bool isRunning = false;
+    private bool isGraphicsMode = false;
+    private bool shouldPreventDefault = false;
+    private bool stopRequested = false;
+    private bool canvasInitialized = false;
+    private ElementReference consoleDisplayRef;
+    private BlazorCanvasGraphics? graphics;
+    private BasicInterpreter? interpreter;
+    private DotNetObjectReference<Index>? dotNetRef;
+
+    // Command history
+    private List<string> commandHistory = new();
+    private int historyIndex = -1;
+    private string savedCurrentInput = "";
+
+    private List<VirtualFile> virtualDiskFiles = new();
+
+    protected override void OnInitialized()
+    {
+        Console.GraphicsModeChanged += OnGraphicsModeChanged;
+
+        // Initialize virtual disk with sample programs
+        InitializeVirtualDisk();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Create .NET reference for JS callbacks
+            dotNetRef = DotNetObjectReference.Create(this);
+
+            // Initialize canvas
+            await JS.InvokeVoidAsync("sharpCanvas.init", "graphicsCanvas");
+
+            // Initialize graphics with direct canvas rendering
+            graphics = new BlazorCanvasGraphics(JS, "graphicsCanvas");
+            graphics.SetGraphicsModeCallback(OnGraphicsModeChanged);
+            graphics.SetConsole(Console);
+            graphics.Initialize();
+            interpreter = new BasicInterpreter(Console, graphics);
+
+            // Show startup message via canvas
+            await JS.InvokeVoidAsync("sharpCanvas.println", "SharpBasic 1.0");
+            await JS.InvokeVoidAsync("sharpCanvas.println", "BASIC Interpreter");
+            await JS.InvokeVoidAsync("sharpCanvas.println", "WebAssembly Edition");
+            await JS.InvokeVoidAsync("sharpCanvas.println", "60300 Bytes free");
+            await JS.InvokeVoidAsync("sharpCanvas.println", "Ok");
+
+            canvasInitialized = true;
+
+            // Start input mode
+            await JS.InvokeVoidAsync("sharpCanvas.startInput");
+
+            // Focus console
+            await consoleDisplayRef.FocusAsync();
+        }
+    }
+
+    private void InitializeVirtualDisk()
+    {
+        virtualDiskFiles = SamplePrograms.GetAll()
+            .Select(p => new VirtualFile { Name = p.Name, Content = p.Content, Size = $"{p.Content.Length}B" })
+            .OrderBy(f => f.Name)
+            .ToList();
+    }
+
+    private void OnGraphicsModeChanged(bool graphics)
+    {
+        isGraphicsMode = graphics;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UpdateInputDisplay()
+    {
+        if (!canvasInitialized) return;
+        await JS.InvokeVoidAsync("sharpCanvas.showInput", currentInput);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        // Handle Escape to stop
+        if (e.Key == "Escape")
+        {
+            if (isRunning)
+            {
+                StopProgram();
+            }
+            shouldPreventDefault = true;
+            return;
+        }
+
+        // When running, don't process keyboard (let INKEY$ handle it)
+        if (isRunning)
+        {
+            shouldPreventDefault = false;
+            return;
+        }
+
+        shouldPreventDefault = true;
+        bool inputChanged = false;
+
+        if (e.Key == "Enter")
+        {
+            await ProcessInput();
+            return;
+        }
+        else if (e.Key == "Backspace")
+        {
+            if (currentInput.Length > 0)
+            {
+                currentInput = currentInput.Substring(0, currentInput.Length - 1);
+                inputChanged = true;
+            }
+        }
+        else if (e.Key == "ArrowUp")
+        {
+            // Previous command in history
+            if (commandHistory.Count > 0)
+            {
+                if (historyIndex == -1)
+                {
+                    // Save current input before browsing history
+                    savedCurrentInput = currentInput;
+                    historyIndex = commandHistory.Count - 1;
+                }
+                else if (historyIndex > 0)
+                {
+                    historyIndex--;
+                }
+                currentInput = commandHistory[historyIndex];
+                inputChanged = true;
+            }
+        }
+        else if (e.Key == "ArrowDown")
+        {
+            // Next command in history
+            if (historyIndex >= 0)
+            {
+                if (historyIndex < commandHistory.Count - 1)
+                {
+                    historyIndex++;
+                    currentInput = commandHistory[historyIndex];
+                }
+                else
+                {
+                    // Back to current input
+                    historyIndex = -1;
+                    currentInput = savedCurrentInput;
+                }
+                inputChanged = true;
+            }
+        }
+        else if (e.Key.Length == 1 && !e.CtrlKey && !e.AltKey)
+        {
+            currentInput += e.Key;
+            inputChanged = true;
+        }
+        else if (e.Key == "F5")
+        {
+            await RunProgram();
+            return;
+        }
+
+        if (inputChanged)
+        {
+            await UpdateInputDisplay();
+        }
+    }
+
+    private async Task ProcessInput()
+    {
+        var input = currentInput.Trim();
+        currentInput = "";
+        historyIndex = -1;
+        savedCurrentInput = "";
+
+        // Move to next line (input is already visible on canvas)
+        await JS.InvokeVoidAsync("sharpCanvas.println", "");
+
+        if (string.IsNullOrEmpty(input))
+        {
+            await StartNewInputLine();
+            return;
+        }
+
+        // Add to history (avoid duplicates of last command)
+        if (commandHistory.Count == 0 || commandHistory[^1] != input)
+        {
+            commandHistory.Add(input);
+            // Keep only last 100 commands
+            if (commandHistory.Count > 100)
+            {
+                commandHistory.RemoveAt(0);
+            }
+        }
+
+        // Check if it's a line number (add to program)
+        if (char.IsDigit(input[0]))
+        {
+            AddProgramLine(input);
+            Console.WriteLine("Ok");
+            await StartNewInputLine();
+            return;
+        }
+
+        // Execute command
+        await ExecuteCommand(input);
+    }
+
+    private async Task StartNewInputLine()
+    {
+        if (canvasInitialized)
+        {
+            await JS.InvokeVoidAsync("sharpCanvas.startInput");
+        }
+    }
+
+    private async Task FocusConsole()
+    {
+        await consoleDisplayRef.FocusAsync();
+    }
+
+    private void AddProgramLine(string line)
+    {
+        // Parse line number
+        int i = 0;
+        while (i < line.Length && char.IsDigit(line[i])) i++;
+        if (i == 0) return;
+
+        int lineNum = int.Parse(line.Substring(0, i));
+        string content = line.Substring(i).TrimStart();
+
+        // Split existing program into lines
+        var lines = programCode.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .ToList();
+
+        // Parse existing line numbers
+        var programLines = new SortedDictionary<int, string>();
+        foreach (var l in lines)
+        {
+            int j = 0;
+            while (j < l.Length && char.IsDigit(l[j])) j++;
+            if (j > 0 && int.TryParse(l.Substring(0, j), out int num))
+            {
+                programLines[num] = l;
+            }
+        }
+
+        // Add or replace line
+        if (string.IsNullOrEmpty(content))
+        {
+            // Empty content = delete line
+            programLines.Remove(lineNum);
+        }
+        else
+        {
+            programLines[lineNum] = line;
+        }
+
+        // Rebuild program
+        programCode = string.Join("\n", programLines.Values);
+    }
+
+    private async Task ExecuteCommand(string command)
+    {
+        if (interpreter == null) return;
+
+        try
+        {
+            var upper = command.ToUpperInvariant();
+
+            if (upper == "RUN" || upper.StartsWith("RUN "))
+            {
+                // Check if RUN "filename" syntax
+                if (upper.StartsWith("RUN "))
+                {
+                    var filename = upper.Substring(4).Trim().Trim('"');
+                    if (!string.IsNullOrEmpty(filename))
+                    {
+                        LoadFile(filename);
+                    }
+                }
+                await RunProgram();
+                return;
+            }
+            if (upper == "LIST")
+            {
+                ListProgram();
+                await StartNewInputLine();
+                return;
+            }
+            if (upper == "NEW")
+            {
+                NewProgram();
+                await StartNewInputLine();
+                return;
+            }
+            if (upper == "CLS")
+            {
+                await ClearScreen();
+                await StartNewInputLine();
+                return;
+            }
+            if (upper.StartsWith("LOAD "))
+            {
+                var filename = upper.Substring(5).Trim().Trim('"');
+                LoadFile(filename);
+                await StartNewInputLine();
+                return;
+            }
+            if (upper == "FILES")
+            {
+                ListFiles();
+                await StartNewInputLine();
+                return;
+            }
+
+            // Try to execute as BASIC statement (synchronously for single statements)
+            interpreter.Execute(command, CancellationToken.None);
+            Console.WriteLine("Ok");
+            await StartNewInputLine();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Console.WriteLine("Ok");
+            await StartNewInputLine();
+        }
+    }
+
+    private async Task RunProgram()
+    {
+        if (isRunning || string.IsNullOrWhiteSpace(programCode))
+        {
+            if (string.IsNullOrWhiteSpace(programCode))
+            {
+                Console.WriteLine("No program in memory");
+                Console.WriteLine("Ok");
+                await StartNewInputLine();
+            }
+            return;
+        }
+
+        isRunning = true;
+        stopRequested = false;
+        StateHasChanged();
+
+        try
+        {
+            // Load the program
+            interpreter?.Load(programCode);
+
+            // Initialize for chunk-based execution
+            interpreter?.InitializeExecution(CancellationToken.None);
+
+            // Start the JavaScript game loop
+            await JS.InvokeVoidAsync("sharpCanvas.startGameLoop", dotNetRef, 2000);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\n{ex.Message}");
+            Console.WriteLine("Ok");
+            isRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Called by JavaScript game loop to execute a chunk of BASIC statements.
+    /// Returns true if there are more statements to execute.
+    /// </summary>
+    [JSInvokable]
+    public bool ExecuteChunk(int maxStatements)
+    {
+        if (interpreter == null || stopRequested)
+        {
+            return false;
+        }
+
+        try
+        {
+            return interpreter.ExecuteChunk(maxStatements);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\n{ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Called by JavaScript when the program has ended normally.
+    /// </summary>
+    [JSInvokable]
+    public async void OnProgramEnded()
+    {
+        await InvokeAsync(async () =>
+        {
+            Console.WriteLine("Ok");
+            isRunning = false;
+            await StartNewInputLine();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Called by JavaScript when an error occurs during execution.
+    /// </summary>
+    [JSInvokable]
+    public async void OnProgramError(string error)
+    {
+        await InvokeAsync(async () =>
+        {
+            Console.WriteLine($"\n{error}");
+            Console.WriteLine("Ok");
+            isRunning = false;
+            await StartNewInputLine();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Called by JavaScript when Ctrl+Break is pressed.
+    /// </summary>
+    [JSInvokable]
+    public void OnCtrlBreak()
+    {
+        StopProgram();
+    }
+
+    private async void StopProgram()
+    {
+        if (isRunning)
+        {
+            stopRequested = true;
+            await JS.InvokeVoidAsync("sharpCanvas.stopGameLoop");
+            interpreter?.StopExecution();
+            Console.WriteLine("\n*Break*");
+            Console.WriteLine("Ok");
+            isRunning = false;
+            await StartNewInputLine();
+            StateHasChanged();
+        }
+    }
+
+    private void ListProgram()
+    {
+        if (string.IsNullOrWhiteSpace(programCode))
+        {
+            Console.WriteLine("Ok");
+        }
+        else
+        {
+            Console.WriteLine(programCode);
+            Console.WriteLine("Ok");
+        }
+    }
+
+    private void NewProgram()
+    {
+        programCode = "";
+        Console.Clear();
+        Console.WriteLine("Ok");
+        isGraphicsMode = false;
+        StateHasChanged();
+    }
+
+    private async Task ClearScreen()
+    {
+        Console.Clear();
+        if (isGraphicsMode && graphics != null)
+        {
+            graphics.ClearScreen();
+        }
+        await Task.CompletedTask;
+        StateHasChanged();
+    }
+
+    private async Task SelectFile(string filename)
+    {
+        selectedFile = filename;
+        StateHasChanged();
+        await FocusConsole();
+    }
+
+    private void LoadSelectedFile()
+    {
+        if (selectedFile != null)
+        {
+            LoadFile(selectedFile);
+        }
+    }
+
+    private void LoadFile(string filename)
+    {
+        var file = virtualDiskFiles.FirstOrDefault(f =>
+            f.Name.Equals(filename, StringComparison.OrdinalIgnoreCase) ||
+            f.Name.Equals(filename + ".BAS", StringComparison.OrdinalIgnoreCase));
+
+        if (file != null)
+        {
+            programCode = file.Content;
+            Console.WriteLine("Ok");
+            StateHasChanged();
+        }
+        else
+        {
+            Console.WriteLine("File not found");
+            Console.WriteLine("Ok");
+        }
+    }
+
+    private async Task LoadAndRun(string filename)
+    {
+        LoadFile(filename);
+        await Task.Delay(50);
+        await RunProgram();
+        await FocusConsole();
+    }
+
+    private async Task RunSelectedFile()
+    {
+        if (selectedFile != null)
+        {
+            await LoadAndRun(selectedFile);
+        }
+    }
+
+    private void ListFiles()
+    {
+        Console.WriteLine("A:\\");
+        foreach (var file in virtualDiskFiles)
+        {
+            Console.WriteLine($"  {file.Name,-20} {file.Size,8}");
+        }
+        Console.WriteLine($"\n  {virtualDiskFiles.Count} file(s)");
+        Console.WriteLine("Ok");
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file != null)
+            {
+                using var stream = file.OpenReadStream(maxAllowedSize: 1024 * 1024);
+                using var reader = new StreamReader(stream);
+                programCode = await reader.ReadToEndAsync();
+                Console.WriteLine($"Loaded: {file.Name}");
+                Console.WriteLine("Ok");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading file: {ex.Message}");
+            Console.WriteLine("Ok");
+        }
+        await StartNewInputLine();
+        await FocusConsole();
+    }
+
+    private void OnConsoleFocus()
+    {
+        // Focus management
+    }
+
+    public void Dispose()
+    {
+        Console.GraphicsModeChanged -= OnGraphicsModeChanged;
+        JS.InvokeVoidAsync("sharpCanvas.stopGameLoop");
+        dotNetRef?.Dispose();
+    }
+
+    private class VirtualFile
+    {
+        public string Name { get; set; } = "";
+        public string Content { get; set; } = "";
+        public string Size { get; set; } = "";
+    }
+}

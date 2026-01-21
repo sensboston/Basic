@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <!-- Suppress intermediate output folders -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <!-- Settings for CLI project only (not Blazor WASM) -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' != 'Basic.Web'">
+    <!-- Single-file self-contained publish -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!-- Publish output to root bin folder -->
+    <PublishDir>$(MSBuildThisFileDirectory)bin\</PublishDir>
+  </PropertyGroup>
+</Project>

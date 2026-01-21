@@ -1,0 +1,67 @@
+10 REM SharpBasic Interpreter Demo
+20 REM Demonstrates all major features
+30 PRINT "=== SharpBasic Interpreter Demo ==="
+40 PRINT
+50 GOSUB 1000
+60 GOSUB 2000
+70 GOSUB 3000
+80 GOSUB 4000
+90 GOSUB 5000
+100 PRINT
+110 PRINT "Demo complete!"
+120 END
+
+1000 REM === FOR/NEXT Demo ===
+1010 PRINT "FOR/NEXT Loop:"
+1020 FOR I = 1 TO 5
+1030 PRINT "  Count: "; I
+1040 NEXT I
+1050 PRINT
+1060 RETURN
+
+2000 REM === Arrays Demo ===
+2010 PRINT "Arrays:"
+2020 DIM NUMS(5)
+2030 FOR I = 1 TO 5
+2040 NUMS(I) = I * I
+2050 NEXT I
+2060 PRINT "  Squares: ";
+2070 FOR I = 1 TO 5
+2080 PRINT NUMS(I); " ";
+2090 NEXT I
+2100 PRINT
+2110 PRINT
+2120 RETURN
+
+3000 REM === String Functions Demo ===
+3010 PRINT "String Functions:"
+3020 S$ = "Hello, World!"
+3030 PRINT "  Original: "; S$
+3040 PRINT "  Length: "; LEN(S$)
+3050 PRINT "  Left 5: "; LEFT$(S$, 5)
+3060 PRINT "  Right 6: "; RIGHT$(S$, 6)
+3070 PRINT "  Mid 8,5: "; MID$(S$, 8, 5)
+3080 PRINT "  Upper: "; UCASE$(S$)
+3090 PRINT
+3100 RETURN
+
+4000 REM === Math Functions Demo ===
+4010 PRINT "Math Functions:"
+4020 PRINT "  SQR(16) = "; SQR(16)
+4030 PRINT "  ABS(-42) = "; ABS(-42)
+4040 PRINT "  INT(3.7) = "; INT(3.7)
+4050 PRINT "  2^10 = "; 2^10
+4060 PRINT "  17 MOD 5 = "; 17 MOD 5
+4070 PRINT
+4080 RETURN
+
+5000 REM === DATA/READ Demo ===
+5010 PRINT "DATA/READ:"
+5020 DATA 10, 20, 30, 40, 50
+5030 SUM = 0
+5040 FOR I = 1 TO 5
+5050 READ N
+5060 SUM = SUM + N
+5070 NEXT I
+5080 PRINT "  Sum of data: "; SUM
+5090 RETURN

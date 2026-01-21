@@ -1,0 +1,9 @@
+10 REM *** Moire Pattern ***
+20 SCREEN 9
+30 CLS
+40 FOR I = 10 TO 300 STEP 5
+50   CIRCLE (320, 175), I, 15
+60   CIRCLE (350, 175), I, 14
+70 NEXT I
+80 A$ = INKEY$: IF A$ = "" THEN 80
+90 END
