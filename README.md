@@ -4,7 +4,7 @@ A GW-BASIC / QBasic interpreter written in C#. Runs classic BASIC programs in th
 
 **[Try it online](https://senssoft.com/basic)** — no installation required!
 
-![SharpBasic Screenshot](screenshots/ss0.jpg)
+<img width="3237" height="1944" alt="image" src="https://github.com/user-attachments/assets/21aa27d2-2551-4119-9e09-15967a277e66" />
 
 ## Features
 
