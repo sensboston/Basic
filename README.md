@@ -139,34 +139,25 @@ The `samples/` directory contains various demonstration programs:
 # Build all projects
 dotnet build
 
-# Run tests
-dotnet test
+# Publish Windows executable (outputs to bin/)
+dotnet publish Basic.Cli -c Release
 
-# Publish Windows executable
-dotnet publish Basic.Cli/Basic.Cli.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o bin
-mv bin/Basic.Cli.exe bin/basic.exe
-
-# Publish Web version
-dotnet publish Basic.Web/Basic.Web.csproj -c Release -o bin/web-temp
-cd bin/web-temp/wwwroot && zip -r ../../basic-web.zip *
-rm -rf bin/web-temp
+# Publish Web version (outputs to bin/)
+dotnet publish Basic.Web -c Release
 ```
 
 ## Project Structure
 
 ```
 Basic/
-├── src/
-│   ├── Basic.Core/          # Interpreter core (platform-independent)
-│   │   ├── Ast/             # Abstract Syntax Tree
-│   │   ├── Lexer.cs         # Tokenizer
-│   │   ├── Parser.cs        # Parser
-│   │   └── Interpreter.cs   # Main interpreter
-│   ├── Basic.Windows/       # Windows graphics (GDI, Console API)
-│   ├── Basic.Cli/           # Console application
-│   └── Basic.Web/           # Blazor WebAssembly version
-├── tests/
-│   └── Basic.Core.Tests/    # Unit tests
+├── Basic.Core/              # Interpreter core (platform-independent)
+│   ├── Ast/                 # Abstract Syntax Tree
+│   ├── Lexer.cs             # Tokenizer
+│   ├── Parser.cs            # Parser
+│   └── Interpreter.cs       # Main interpreter
+├── Basic.Windows/           # Windows graphics (GDI, Console API)
+├── Basic.Cli/               # Console application
+├── Basic.Web/               # Blazor WebAssembly version
 ├── samples/                 # Sample BASIC programs
 └── bin/                     # Release binaries
 ```

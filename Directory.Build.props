@@ -5,8 +5,14 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
-  <!-- Settings for CLI project only (not Blazor WASM) -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' != 'Basic.Web'">
+  <!-- No debug symbols in Release -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- Settings for Basic.Cli project only -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Basic.Cli'">
     <!-- Single-file self-contained publish -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>

@@ -7,6 +7,11 @@
     <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
 
+  <!-- Release publish settings -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishDir>$(MSBuildThisFileDirectory)..\bin\web-publish\</PublishDir>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.*" />
   </ItemGroup>
@@ -14,5 +19,18 @@
   <ItemGroup>
     <ProjectReference Include="..\Basic.Core\Basic.Core.csproj" />
   </ItemGroup>
+
+  <!-- Create basic-web.zip from wwwroot after publish -->
+  <Target Name="CreateWebZip" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <BinDir>$(MSBuildThisFileDirectory)..\bin\</BinDir>
+      <WwwRootDir>$(PublishDir)wwwroot\</WwwRootDir>
+      <ZipFile>$(BinDir)basic-web.zip</ZipFile>
+    </PropertyGroup>
+    <Delete Files="$(ZipFile)" Condition="Exists('$(ZipFile)')" />
+    <ZipDirectory SourceDirectory="$(WwwRootDir)" DestinationFile="$(ZipFile)" Overwrite="true" />
+    <RemoveDir Directories="$(PublishDir)" />
+    <Message Importance="High" Text="Published: $(ZipFile)" />
+  </Target>
 
 </Project>

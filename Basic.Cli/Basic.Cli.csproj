@@ -12,4 +12,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Rename Basic.Cli.exe to basic.exe after publish -->
+  <Target Name="RenameToBasicExe" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <SourceExe>$(PublishDir)Basic.Cli.exe</SourceExe>
+      <TargetExe>$(PublishDir)basic.exe</TargetExe>
+    </PropertyGroup>
+    <Delete Files="$(TargetExe)" Condition="Exists('$(TargetExe)')" />
+    <Move SourceFiles="$(SourceExe)" DestinationFiles="$(TargetExe)" Condition="Exists('$(SourceExe)')" />
+    <Message Importance="High" Text="Published: $(TargetExe)" />
+  </Target>
+
 </Project>
