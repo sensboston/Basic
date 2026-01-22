@@ -203,13 +203,16 @@ public sealed class SoftwareRenderer : IGraphics
         // Platform-specific sound generation
         // Duration is in clock ticks (18.2 per second)
         int durationMs = (int)(duration * 1000.0 / 18.2);
-        try
+        if (OperatingSystem.IsWindows())
         {
-            Console.Beep(frequency, durationMs);
-        }
-        catch
-        {
-            // Ignore if not supported
+            try
+            {
+                Console.Beep(frequency, durationMs);
+            }
+            catch
+            {
+                // Ignore if not supported
+            }
         }
     }
 

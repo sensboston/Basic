@@ -75,7 +75,7 @@ public sealed class FrameBuffer
                     byte rr = (byte)(r * 51);
                     byte gg = (byte)(g * 51);
                     byte bb = (byte)(b * 51);
-                    pal[idx++] = (uint)(0xFF000000 | (rr << 16) | (gg << 8) | bb);
+                    pal[idx++] = 0xFF000000 | ((uint)rr << 16) | ((uint)gg << 8) | bb;
                 }
             }
         }
@@ -84,7 +84,7 @@ public sealed class FrameBuffer
         for (int i = 0; i < 24; i++)
         {
             byte gray = (byte)(8 + i * 10);
-            pal[idx++] = (uint)(0xFF000000 | (gray << 16) | (gray << 8) | gray);
+            pal[idx++] = 0xFF000000 | ((uint)gray << 16) | ((uint)gray << 8) | gray;
         }
 
         return pal;
@@ -97,7 +97,7 @@ public sealed class FrameBuffer
     {
         if (index >= 0 && index < 256)
         {
-            palette[index] = (uint)(0xFF000000 | (r << 16) | (g << 8) | b);
+            palette[index] = 0xFF000000 | ((uint)r << 16) | ((uint)g << 8) | b;
         }
     }
 
@@ -175,7 +175,7 @@ public sealed class FrameBuffer
         byte b = pixels[offset];
         byte g = pixels[offset + 1];
         byte r = pixels[offset + 2];
-        uint color = (uint)(0xFF000000 | (r << 16) | (g << 8) | b);
+        uint color = 0xFF000000 | ((uint)r << 16) | ((uint)g << 8) | b;
 
         // Find matching palette color
         for (int i = 0; i < 256; i++)

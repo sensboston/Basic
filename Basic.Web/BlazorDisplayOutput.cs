@@ -13,7 +13,6 @@ public sealed class BlazorDisplayOutput : IDisplayOutput
     private readonly string canvasId;
     private int width;
     private int height;
-    private bool initialized;
     private bool disposed;
     private readonly List<string> keyQueue = new();
     private readonly object keyLock = new();
@@ -65,7 +64,6 @@ public sealed class BlazorDisplayOutput : IDisplayOutput
             // Small delay to allow UI to switch to canvas
             await Task.Delay(50);
             await jsRuntime.InvokeVoidAsync("basicCanvas.initialize", canvasId, width, height);
-            initialized = true;
         }
         catch (Exception ex)
         {
